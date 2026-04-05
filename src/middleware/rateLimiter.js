@@ -1,6 +1,6 @@
 const rateLimit = require("express-rate-limit");
 
-// General limiter for all routes
+// General limiter for all routes..
 const globalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, 
   max: 10,                  
