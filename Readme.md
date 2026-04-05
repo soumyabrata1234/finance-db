@@ -2,20 +2,45 @@
 
 A RESTful backend API for a finance dashboard system with role-based access control, financial record management, and dashboard analytics.
 
+## Live Demo
+
+**Base URL:** `https://<your-service-name>.onrender.com`
+
+**API Docs (Swagger):** `https://<your-service-name>.onrender.com/api/docs`
+
+> **Note:** This API is deployed on Render's free tier. The server may take 30–60 seconds to respond on the first request if it has been inactive.
+
+### Test Admin Credentials
+You can use these credentials to explore the API immediately without registering:
+
+| Field | Value |
+|-------|-------|
+| Email | `admin@admin.com` |
+| Password | `123456` |
+| Role | `admin` |
+
+**Quick start:** Login via `POST /api/auth/login` with the credentials above → copy the token from the response → click **Authorize** on the Swagger UI and paste it as `Bearer <token>`.
+
+---
+
 ## Tech Stack
 
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: MongoDB Atlas (Mongoose ODM)
-- **Authentication**: JWT (JSON Web Tokens)
-- **Password Hashing**: bcryptjs
+- **Runtime:** Node.js
+- **Framework:** Express.js
+- **Database:** MongoDB Atlas (Mongoose ODM)
+- **Authentication:** JWT (JSON Web Tokens)
+- **Password Hashing:** bcryptjs
+- **API Docs:** Swagger UI (swagger-jsdoc + swagger-ui-express)
+- **Testing:** Jest + Supertest
+- **Rate Limiting:** express-rate-limit
 
 ## Project Structure
 ```
 finance-backend/
 ├── src/
 │   ├── config/
-│   │   └── db.js               # MongoDB connection
+│   │   ├── db.js               # MongoDB connection
+│   │   └── swagger.js          # Swagger configuration
 │   ├── models/
 │   │   ├── User.js             # User schema
 │   │   └── FinancialRecord.js  # Financial record schema
@@ -36,9 +61,16 @@ finance-backend/
 │   │   └── dashboard.service.js
 │   ├── middleware/
 │   │   ├── auth.middleware.js  # JWT verification + RBAC
+│   │   ├── rateLimiter.js     # Global + auth rate limiters
 │   │   └── errorHandler.js    # Global error handler
-│   └── utils/
-│       └── jwt.js             # Token sign/verify helpers
+│   ├── utils/
+│   │   └── jwt.js             # Token sign/verify helpers
+│   └── tests/
+│       ├── setup.js
+│       ├── auth.test.js
+│       ├── user.test.js
+│       ├── record.test.js
+│       └── dashboard.test.js
 ├── .env.example
 ├── .gitignore
 ├── app.js
@@ -74,6 +106,7 @@ Open `.env` and fill in your values:
 ```env
 PORT=5000
 MONGO_URI=your_mongodb_atlas_connection_string_here
+MONGO_URI_TEST=your_mongodb_atlas_test_db_connection_string_here
 JWT_SECRET=your_jwt_secret_here
 JWT_EXPIRES_IN=7d
 ```
@@ -89,6 +122,18 @@ npm start
 
 Server will run on `http://localhost:5000`
 
+**5. View API docs**
+```
+http://localhost:5000/api/docs
+```
+
+**6. Run tests**
+```bash
+npm test
+```
+
+---
+
 ## Roles and Permissions
 
 | Action | Viewer | Analyst | Admin |
@@ -103,12 +148,16 @@ Server will run on `http://localhost:5000`
 
 > New users are assigned the `viewer` role by default. An admin can upgrade roles via `PATCH /api/users/:id/role`.
 
+---
+
 ## API Reference
 
-All protected routes require the following header:
+All protected routes require:
 ```
 Authorization: Bearer <your_jwt_token>
 ```
+
+Get your token by calling `POST /api/auth/login` with the admin credentials above.
 
 ---
 
@@ -149,11 +198,11 @@ POST /api/auth/login
 **Body:**
 ```json
 {
-  "email": "soumya@example.com",
+  "email": "admin@admin.com",
   "password": "123456"
 }
 ```
-**Response `200`:** Same shape as register.
+**Response `200`:** Same shape as register response.
 
 ---
 
@@ -249,7 +298,7 @@ PATCH /api/records/:id
 ```
 DELETE /api/records/:id
 ```
-> Records are **soft deleted** — they are marked `isDeleted: true` and excluded from all queries. No data is permanently removed.
+> Records are **soft deleted** — marked `isDeleted: true` and excluded from all queries. No data is permanently removed.
 
 ---
 
@@ -316,6 +365,17 @@ GET /api/dashboard/recent?limit=5
 
 ---
 
+## Rate Limiting
+
+| Limiter | Routes | Window | Max Requests |
+|---------|--------|--------|-------------|
+| Auth limiter | `/api/auth/*` | 15 minutes | 10 requests |
+| Global limiter | All routes | 15 minutes | 100 requests |
+
+Exceeding the limit returns `429 Too Many Requests`.
+
+---
+
 ## Error Responses
 
 All errors follow a consistent shape:
@@ -333,7 +393,30 @@ All errors follow a consistent shape:
 | `403` | Insufficient role permissions |
 | `404` | Resource not found |
 | `409` | Conflict (e.g. email already in use) |
+| `429` | Too many requests |
 | `500` | Internal server error |
+
+---
+
+## Testing
+
+Tests are written with Jest and Supertest. Each test suite runs against a separate `finance_test_db` database that is dropped after every run — real data is never touched.
+```bash
+npm test
+```
+
+Expected output:
+```
+PASS src/tests/auth.test.js
+PASS src/tests/user.test.js
+PASS src/tests/record.test.js
+PASS src/tests/dashboard.test.js
+
+Test Suites: 4 passed, 4 total
+Tests:       28 passed, 28 total
+```
+
+---
 
 ## Design Decisions and Assumptions
 
@@ -354,3 +437,6 @@ New users get the least privileged role by default. An admin must explicitly upg
 
 **MongoDB aggregation for dashboard**
 Dashboard endpoints use MongoDB's `$group` and `$project` aggregation pipeline instead of fetching all records and computing in JavaScript. This keeps computation in the database layer and scales well.
+
+**Two-tier rate limiting**
+Auth routes have a stricter limit (10 req / 1 min) to prevent brute force attacks on login. All other routes share a looser global limit (100 req / 1 min).
