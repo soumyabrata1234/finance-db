@@ -15,7 +15,7 @@ const options = {
         description: "Local server",
       },
       {
-        url: "https://your-deployed-url.com",
+        url: "https://finance-db.onrender.com",
         description: "Production server",
       },
     ],
