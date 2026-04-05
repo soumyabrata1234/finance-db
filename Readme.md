@@ -208,6 +208,10 @@ POST /api/auth/login
 
 ### Users _(Admin only)_
 
+Already created Admin
+Email - admin@admin.com,
+Password- 123456
+
 #### List all users
 ```
 GET /api/users
