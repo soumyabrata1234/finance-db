@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");  
 const swaggerUi = require("swagger-ui-express");        
 const swaggerSpec = require("./src/config/swagger");   
 const app = express();
@@ -10,6 +11,7 @@ const dashboardRoutes = require("./src/routes/dashboard.routes");
 const errorHandler = require("./src/middleware/errorHandler");
 const { globalLimiter, authLimiter } = require("./src/middleware/rateLimiter");
 
+app.use(cors());     
 app.use(express.json());
 app.use(globalLimiter);
 
