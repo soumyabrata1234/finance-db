@@ -2,11 +2,7 @@
 
 A RESTful backend API for a finance dashboard system with role-based access control, financial record management, and dashboard analytics.
 
-## Live Demo
 
-**Base URL:** `https://<your-service-name>.onrender.com`
-
-**API Docs (Swagger):** `https://<your-service-name>.onrender.com/api/docs`
 
 > **Note:** This API is deployed on Render's free tier. The server may take 30–60 seconds to respond on the first request if it has been inactive.
 
